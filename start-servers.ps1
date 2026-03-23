@@ -11,7 +11,7 @@ Write-Host 'Starting STT server (faster-whisper) on :9001...'
 Start-Process -FilePath python -ArgumentList "$VL\servers\stt_server.py","--port","9001","--device","cuda" -RedirectStandardOutput "$VL\stt.log" -RedirectStandardError "$VL\stt_err.log" -WindowStyle Hidden
 
 Write-Host 'Starting TTS server (piper) on :9002...'
-Start-Process -FilePath python -ArgumentList "$VL\servers\tts_server.py","--port","9002","--voice","$VL\models\en_US-lessac-medium.onnx" -RedirectStandardOutput "$VL\tts.log" -RedirectStandardError "$VL\tts_err.log" -WindowStyle Hidden
+Start-Process -FilePath python -ArgumentList "$VL\servers\tts_server.py","--port","9002","--voice","$VL\models\en_US-libritts_r-medium.onnx" -RedirectStandardOutput "$VL\tts.log" -RedirectStandardError "$VL\tts_err.log" -WindowStyle Hidden
 
 Start-Sleep -Seconds 3
 
