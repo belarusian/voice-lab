@@ -34,11 +34,12 @@ from pipecat.transports.websocket.fastapi import (
 from pipeline.call_logger import (
     CallTranscript,
     CallerTranscriptLogger,
-    SunnyTranscriptLogger,
+    AssistantTranscriptLogger,
     save_and_push,
 )
+from pipeline.kokoro_tts import CleanKokoroTTS
+
 from pipeline.stt_service import RemoteWhisperSTT
-from pipeline.tts_service import RemotePiperTTS
 
 app = FastAPI()
 
@@ -125,9 +126,12 @@ async def ws_twilio(websocket: WebSocket):
         model=cfg["llm"]["model"],
     )
 
-    tts = RemotePiperTTS(
-        url=cfg["tts"]["url"],
-        sample_rate=cfg["tts"]["sample_rate"],
+    tts_cfg = cfg.get("tts", {})
+    tts = CleanKokoroTTS(
+        speed=tts_cfg.get("speed", 1.0),
+        settings=CleanKokoroTTS.Settings(
+            voice=tts_cfg.get("voice", "af_heart"),
+        ),
     )
 
     system_prompt = cfg["llm"].get("phone_system_prompt", cfg["llm"]["system_prompt"])
@@ -142,7 +146,7 @@ async def ws_twilio(websocket: WebSocket):
     # Call transcript logging
     transcript = CallTranscript(caller, CALL_LOG_DIR) if CALL_LOG_DIR else None
     caller_logger = CallerTranscriptLogger(transcript) if transcript else None
-    sunny_logger = SunnyTranscriptLogger(transcript) if transcript else None
+    sunny_logger = AssistantTranscriptLogger(transcript) if transcript else None
 
     stages = [transport.input(), stt]
     if caller_logger:

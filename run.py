@@ -13,14 +13,23 @@ from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.local.audio import LocalAudioTransport, LocalAudioTransportParams
 
+from pipeline.kokoro_tts import CleanKokoroTTS
+
 from pipeline.stt_service import RemoteWhisperSTT
-from pipeline.tts_service import RemotePiperTTS
 
 
 async def main():
     config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yaml"
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
+
+    tts_cfg = cfg.get("tts", {})
+    tts = CleanKokoroTTS(
+        speed=tts_cfg.get("speed", 1.0),
+        settings=CleanKokoroTTS.Settings(
+            voice=tts_cfg.get("voice", "af_heart"),
+        ),
+    )
 
     transport = LocalAudioTransport(
         params=LocalAudioTransportParams(
@@ -29,7 +38,7 @@ async def main():
             vad_analyzer=SileroVADAnalyzer(
                 params=VADParams(min_volume=0.15, confidence=0.6),
             ),
-            audio_out_sample_rate=cfg["tts"]["sample_rate"],
+            audio_out_sample_rate=tts.sample_rate,
         ),
     )
 
@@ -39,11 +48,6 @@ async def main():
         api_key="not-needed",
         base_url=cfg["llm"]["base_url"],
         model=cfg["llm"]["model"],
-    )
-
-    tts = RemotePiperTTS(
-        url=cfg["tts"]["url"],
-        sample_rate=cfg["tts"]["sample_rate"],
     )
 
     context = OpenAILLMContext(

@@ -1,6 +1,6 @@
 """Call transcript logger for voice-lab phone server.
 
-Captures caller (STT) and Sunny (LLM) text from the Pipecat pipeline,
+Captures caller (STT) and Sasha (LLM) text from the Pipecat pipeline,
 writes timestamped transcripts, and commits/pushes to the call-log repo.
 """
 import asyncio
@@ -35,7 +35,7 @@ class CallTranscript:
             text = "".join(self._sunny_buf).strip()
             if text:
                 ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
-                self._entries.append((ts, "Sunny", text))
+                self._entries.append((ts, "Sasha", text))
             self._sunny_buf.clear()
 
     def save(self) -> Path | None:
@@ -111,8 +111,8 @@ class CallerTranscriptLogger(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-class SunnyTranscriptLogger(FrameProcessor):
-    """After LLM: captures Sunny's text (TextFrame) before TTS."""
+class AssistantTranscriptLogger(FrameProcessor):
+    """After LLM: captures Sasha's text (TextFrame) before TTS."""
 
     def __init__(self, transcript: CallTranscript, **kwargs):
         super().__init__(**kwargs)
