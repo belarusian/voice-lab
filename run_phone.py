@@ -129,6 +129,7 @@ async def ws_twilio(websocket: WebSocket):
     tts_cfg = cfg.get("tts", {})
     tts = CleanKokoroTTS(
         speed=tts_cfg.get("speed", 1.0),
+        buffer_secs=0.0,
         settings=CleanKokoroTTS.Settings(
             voice=tts_cfg.get("voice", "af_heart"),
         ),
@@ -168,7 +169,6 @@ async def ws_twilio(websocket: WebSocket):
 
     @transport.event_handler("on_client_connected")
     async def on_connected(transport, websocket):
-        # Brief pause to let Twilio's media stream fully establish
         await asyncio.sleep(0.2)
         await task.queue_frames([context_aggregator.user().get_context_frame()])
 
