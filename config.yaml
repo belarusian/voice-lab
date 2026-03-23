@@ -7,6 +7,11 @@ llm:
   system_prompt: >
     You are a helpful voice assistant. Keep responses concise
     and conversational -- one to three sentences max.
+  phone_system_prompt: >
+    You are a voice assistant answering phone calls. Keep responses
+    concise and natural for spoken conversation. Do not use emojis
+    or markdown. If you do not know something, say so. If the caller
+    needs a human, tell them you will connect them.
 
 tts:
   url: "ws://10.106.1.91:9002/synthesize"

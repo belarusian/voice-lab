@@ -1,0 +1,16 @@
+[Unit]
+Description=Voice AI Phone Server
+After=network.target
+
+[Service]
+Type=simple
+User=sasha
+WorkingDirectory=/home/sasha/voice-lab
+ExecStart=/home/sasha/voice-lab/.venv/bin/python run_phone.py
+Restart=on-failure
+RestartSec=5
+Environment="TWILIO_ACCOUNT_SID="
+Environment="TWILIO_AUTH_TOKEN="
+
+[Install]
+WantedBy=multi-user.target
