@@ -96,9 +96,8 @@ async def ws_twilio(websocket: WebSocket):
             audio_out_enabled=True,
             audio_in_sample_rate=16000,
             audio_out_sample_rate=16000,
-            vad_enabled=True,
             vad_analyzer=SileroVADAnalyzer(
-                params=VADParams(min_volume=0.3, confidence=0.7),
+                params=VADParams(min_volume=0.05, confidence=0.5),
             ),
         ),
     )
@@ -118,7 +117,10 @@ async def ws_twilio(websocket: WebSocket):
 
     system_prompt = cfg["llm"].get("phone_system_prompt", cfg["llm"]["system_prompt"])
     context = OpenAILLMContext(
-        messages=[{"role": "system", "content": system_prompt}]
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "[caller just connected]"},
+        ]
     )
     context_aggregator = llm.create_context_aggregator(context)
 
@@ -138,6 +140,11 @@ async def ws_twilio(websocket: WebSocket):
     )
 
     runner = PipelineRunner()
+
+    @transport.event_handler("on_client_connected")
+    async def on_connected(transport, websocket):
+        # Trigger the LLM to greet the caller immediately
+        await task.queue_frames([context_aggregator.user().get_context_frame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_disconnected(transport, websocket):
