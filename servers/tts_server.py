@@ -8,11 +8,8 @@ Run on inference machine:
 First run downloads the voice model from HuggingFace.
 """
 import argparse
-import io
 import json
-import wave
 
-import numpy as np
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from piper import PiperVoice
@@ -33,19 +30,9 @@ async def synthesize(ws: WebSocket):
                 continue
 
             try:
-                # Piper writes WAV to a file-like object
-                buf = io.BytesIO()
-                with wave.open(buf, "wb") as wf:
-                    wf.setnchannels(1)
-                    wf.setsampwidth(2)  # 16-bit PCM
-                    wf.setframerate(voice_sample_rate)
-                    voice.synthesize(text, wf)
-
-                # Extract raw PCM from WAV
-                buf.seek(0)
-                with wave.open(buf, "rb") as wf:
-                    pcm = wf.readframes(wf.getnframes())
-
+                # synthesize() returns Iterable[AudioChunk]
+                pcm = b"".join(c.audio_int16_bytes for c in voice.synthesize(text))
+                print(f"[TTS] '{text}' -> {len(pcm)} bytes", flush=True)
                 await ws.send_bytes(pcm)
             except Exception as e:
                 print(f"[TTS] synthesis error: {e}", flush=True)
