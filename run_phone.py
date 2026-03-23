@@ -168,7 +168,8 @@ async def ws_twilio(websocket: WebSocket):
 
     @transport.event_handler("on_client_connected")
     async def on_connected(transport, websocket):
-        # Trigger the LLM to greet the caller immediately
+        # Brief pause to let Twilio's media stream fully establish
+        await asyncio.sleep(0.2)
         await task.queue_frames([context_aggregator.user().get_context_frame()])
 
     @transport.event_handler("on_client_disconnected")
