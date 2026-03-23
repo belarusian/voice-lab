@@ -1,0 +1,13 @@
+stt:
+  url: "ws://10.106.1.91:9001/transcribe"
+
+llm:
+  base_url: "http://10.106.1.184:8080/v1"
+  model: "default"
+  system_prompt: >
+    You are a helpful voice assistant. Keep responses concise
+    and conversational -- one to three sentences max.
+
+tts:
+  url: "ws://10.106.1.91:9002/synthesize"
+  sample_rate: 22050

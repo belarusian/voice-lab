@@ -1,0 +1,29 @@
+[project]
+name = "voice-lab"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "pipecat-ai[silero,openai]",
+    "sounddevice",
+    "websockets>=12.0",
+    "numpy",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+server-stt = [
+    "fastapi",
+    "uvicorn[standard]",
+    "faster-whisper",
+]
+server-tts = [
+    "fastapi",
+    "uvicorn[standard]",
+    "piper-tts",
+]
+
+[tool.setuptools.packages.find]
+include = ["pipeline*"]
+
+[project.scripts]
+voice-lab = "run:main"
