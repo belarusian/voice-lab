@@ -13,10 +13,12 @@ import json
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from piper import PiperVoice
+from piper.config import SynthesisConfig
 
 app = FastAPI()
 voice: PiperVoice | None = None
 voice_sample_rate: int = 22050
+syn_config: SynthesisConfig | None = None
 
 
 @app.websocket("/synthesize")
@@ -31,7 +33,7 @@ async def synthesize(ws: WebSocket):
 
             try:
                 # synthesize() returns Iterable[AudioChunk]
-                pcm = b"".join(c.audio_int16_bytes for c in voice.synthesize(text))
+                pcm = b"".join(c.audio_int16_bytes for c in voice.synthesize(text, syn_config))
                 print(f"[TTS] '{text}' -> {len(pcm)} bytes", flush=True)
                 await ws.send_bytes(pcm)
             except Exception as e:
@@ -51,12 +53,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=9002)
     parser.add_argument("--voice", default="en_US-lessac-medium")
+    parser.add_argument("--length-scale", type=float, default=1.0,
+                        help="Speech speed: >1.0 slower, <1.0 faster")
     args = parser.parse_args()
 
     print(f"loading piper voice: {args.voice}")
     voice = PiperVoice.load(args.voice)
     voice_sample_rate = voice.config.sample_rate
-    print(f"voice ready (sample_rate={voice_sample_rate})")
+    syn_config = SynthesisConfig(length_scale=args.length_scale)
+    print(f"voice ready (sample_rate={voice_sample_rate}, length_scale={args.length_scale})")
 
     uvicorn.run(app, host="0.0.0.0", port=args.port)
 
