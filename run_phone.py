@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import sys
+from xml.sax.saxutils import escape as xml_escape
 
 import uvicorn
 import yaml
@@ -30,6 +31,12 @@ from pipecat.transports.websocket.fastapi import (
     FastAPIWebsocketTransport,
 )
 
+from pipeline.call_logger import (
+    CallTranscript,
+    CallerTranscriptLogger,
+    SunnyTranscriptLogger,
+    save_and_push,
+)
 from pipeline.stt_service import RemoteWhisperSTT
 from pipeline.tts_service import RemotePiperTTS
 
@@ -41,19 +48,26 @@ with open(config_path) as f:
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+CALL_LOG_DIR = cfg.get("call_log", {}).get("path", "")
 
-TWIML = """<?xml version="1.0" encoding="UTF-8"?>
+
+def _make_twiml(caller: str) -> str:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Connect>
-        <Stream url="wss://voice.compsci.boutique/ws" />
+        <Stream url="wss://voice.compsci.boutique/ws">
+            <Parameter name="caller" value="{xml_escape(caller)}" />
+        </Stream>
     </Connect>
 </Response>"""
 
 
 @app.post("/incoming")
 async def incoming(request: Request):
-    """Twilio webhook -- return TwiML to open a media stream."""
-    return PlainTextResponse(TWIML, media_type="application/xml")
+    """Twilio webhook -- return TwiML with caller number as stream param."""
+    form = await request.form()
+    caller = form.get("From", "unknown")
+    return PlainTextResponse(_make_twiml(caller), media_type="application/xml")
 
 
 @app.websocket("/ws")
@@ -75,8 +89,9 @@ async def ws_twilio(websocket: WebSocket):
 
     stream_sid = start_data.get("streamSid", "")
     call_sid = start_data.get("callSid", "")
+    caller = start_data.get("customParameters", {}).get("caller", "unknown")
 
-    print(f"[phone] call connected: call_sid={call_sid} stream_sid={stream_sid}")
+    print(f"[phone] call connected: caller={caller} call_sid={call_sid} stream_sid={stream_sid}")
 
     serializer = TwilioFrameSerializer(
         stream_sid=stream_sid,
@@ -124,15 +139,21 @@ async def ws_twilio(websocket: WebSocket):
     )
     context_aggregator = llm.create_context_aggregator(context)
 
-    pipeline = Pipeline([
-        transport.input(),
-        stt,
-        context_aggregator.user(),
-        llm,
-        tts,
-        transport.output(),
-        context_aggregator.assistant(),
-    ])
+    # Call transcript logging
+    transcript = CallTranscript(caller, CALL_LOG_DIR) if CALL_LOG_DIR else None
+    caller_logger = CallerTranscriptLogger(transcript) if transcript else None
+    sunny_logger = SunnyTranscriptLogger(transcript) if transcript else None
+
+    stages = [transport.input(), stt]
+    if caller_logger:
+        stages.append(caller_logger)
+    stages.append(context_aggregator.user())
+    stages.append(llm)
+    if sunny_logger:
+        stages.append(sunny_logger)
+    stages.extend([tts, transport.output(), context_aggregator.assistant()])
+
+    pipeline = Pipeline(stages)
 
     task = PipelineTask(
         pipeline,
@@ -148,7 +169,9 @@ async def ws_twilio(websocket: WebSocket):
 
     @transport.event_handler("on_client_disconnected")
     async def on_disconnected(transport, websocket):
-        print(f"[phone] call disconnected: call_sid={call_sid}")
+        print(f"[phone] call disconnected: caller={caller} call_sid={call_sid}")
+        if transcript:
+            await save_and_push(transcript)
         await task.cancel()
 
     await runner.run(task)

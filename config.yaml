@@ -19,3 +19,6 @@ llm:
 tts:
   url: "ws://10.106.1.91:9002/synthesize"
   sample_rate: 22050
+
+call_log:
+  path: "/home/sasha/call-log"
