@@ -35,10 +35,12 @@ def _clean_for_speech(text: str) -> str:
 class CleanKokoroTTS(KokoroTTSService):
     """KokoroTTSService with speed control and optional buffering."""
 
-    def __init__(self, *, speed: float = 1.0, buffer_secs: float = 0.0, **kwargs):
+    def __init__(self, *, speed: float = 1.0, buffer_secs: float = 0.0, pause_ms: int = 0, volume: float = 1.0, **kwargs):
         super().__init__(**kwargs)
         self._speed = speed
         self._buffer_secs = buffer_secs
+        self._pause_ms = pause_ms
+        self._volume = volume
 
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         text = _clean_for_speech(text)
@@ -56,23 +58,43 @@ class CleanKokoroTTS(KokoroTTSService):
             min_chunk = int(self.sample_rate * self._buffer_secs) * 2
             buffer = bytearray()
 
+            # Silence frame inserted between chunks for natural pacing
+            silence_samples = int(self.sample_rate * self._pause_ms / 1000)
+            silence = b"\x00" * (silence_samples * 2) if self._pause_ms > 0 else b""
+            need_pause = False
+
             async for samples, sample_rate in stream:
                 await self.stop_ttfb_metrics()
-                audio_int16 = (samples * 32767).astype(np.int16).tobytes()
+                audio_int16 = (samples * 32767 * self._volume).clip(-32768, 32767).astype(np.int16).tobytes()
                 audio_data = await self._resampler.resample(
                     audio_int16, sample_rate, self.sample_rate
                 )
 
                 if min_chunk <= 0:
+                    if self._pause_ms > 0 and need_pause:
+                        yield TTSAudioRawFrame(
+                            audio=silence,
+                            sample_rate=self.sample_rate,
+                            num_channels=1,
+                            context_id=context_id,
+                        )
                     yield TTSAudioRawFrame(
                         audio=audio_data,
                         sample_rate=self.sample_rate,
                         num_channels=1,
                         context_id=context_id,
                     )
+                    need_pause = True
                 else:
                     buffer.extend(audio_data)
                     if len(buffer) >= min_chunk:
+                        if self._pause_ms > 0 and need_pause:
+                            yield TTSAudioRawFrame(
+                                audio=silence,
+                                sample_rate=self.sample_rate,
+                                num_channels=1,
+                                context_id=context_id,
+                            )
                         yield TTSAudioRawFrame(
                             audio=bytes(buffer),
                             sample_rate=self.sample_rate,
@@ -80,6 +102,7 @@ class CleanKokoroTTS(KokoroTTSService):
                             context_id=context_id,
                         )
                         buffer.clear()
+                        need_pause = True
 
             if buffer:
                 yield TTSAudioRawFrame(

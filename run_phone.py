@@ -130,6 +130,8 @@ async def ws_twilio(websocket: WebSocket):
     tts = CleanKokoroTTS(
         speed=tts_cfg.get("phone_speed", tts_cfg.get("speed", 1.0)),
         buffer_secs=0.0,
+        pause_ms=tts_cfg.get("phone_pause_ms", 0),
+        volume=tts_cfg.get("phone_volume", 1.0),
         settings=CleanKokoroTTS.Settings(
             voice=tts_cfg.get("voice", "af_heart"),
         ),

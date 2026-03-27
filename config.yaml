@@ -31,7 +31,9 @@ tts:
   engine: "kokoro"
   voice: "af_heart"
   speed: 1.21
-  phone_speed: 1.01
+  phone_speed: 0.84
+  phone_pause_ms: 120
+  phone_volume: 0.85
   # Legacy Piper settings (for local mic pipeline or fallback)
   piper_url: "ws://10.106.1.91:9002/synthesize"
   piper_sample_rate: 22050
