@@ -28,3 +28,6 @@ server-tts = [
 
 [tool.setuptools.packages.find]
 include = ["pipeline*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
