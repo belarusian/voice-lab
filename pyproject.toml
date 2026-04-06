@@ -3,7 +3,7 @@ name = "voice-lab"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "pipecat-ai[silero,openai]",
+    "pipecat-ai[silero,openai,kokoro]",
     "websockets>=12.0",
     "pyyaml",
 ]
