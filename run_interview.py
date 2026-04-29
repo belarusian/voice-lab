@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """voice-lab interview practice -- Pipecat pipeline: mic -> STT -> LLM -> TTS -> speaker.
 
-The LLM acts as a GitHub recruiter coach, asking behavioral and technical questions,
+The LLM acts as a technical recruiter coach, asking behavioral and technical questions,
 then coaching you on how to answer them using your resume.
 
     python run_interview.py              # default config
@@ -26,7 +26,7 @@ The coach covers:
     1. Background and motivation
     2. Technical depth (distributed systems, platform engineering)
     3. Behavioral questions (leadership, conflict, failure)
-    4. Role-specific (GitHub, Codespaces, Staff level)
+    4. Role-specific (developer tools, Staff level)
     5. Your questions for them
 """
 import asyncio

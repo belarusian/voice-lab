@@ -14,8 +14,11 @@ import asyncio
 import re
 from pathlib import Path
 
-# Import feedback keywords from separate file
-sys.path.insert(0, str(Path(__file__).parent))
+# Load private interview data from separate repo
+_INTERVIEWS_PATH = Path.home() / "Ideas" / "interviews"
+if _INTERVIEWS_PATH.exists():
+    sys.path.insert(0, str(_INTERVIEWS_PATH))
+
 from feedback_keywords import topic_keywords
 
 
@@ -54,73 +57,26 @@ def parse_transcript(filepath: str) -> list[tuple[str, str, str]]:
 
 
 def generate_feedback(entries: list[tuple[str, str, str]], filepath: str) -> str:
-    """Generate written feedback from parsed transcript entries."""
+    """Generate minimal metadata for LLM review."""
     if not entries:
         return "No transcript found to analyze."
 
-    # Count turns
     caller_turns = [e for e in entries if e[1] == "Caller"]
     assistant_turns = [e for e in entries if e[1] == "Sasha"]
 
-    # Build feedback
     lines = [
-        "# Interview Practice Feedback",
-        "",
-        f"**Date**: {Path(filepath).stem.split('_')[0]}",
-        f"**Total turns**: {len(entries)}",
-        f"  - Your answers: {len(caller_turns)}",
-        f"  - Coach feedback: {len(assistant_turns)}",
-        "",
+        f"Transcript metadata:",
+        f"- Date: {Path(filepath).stem.split('_')[0]}",
+        f"- Total turns: {len(entries)}",
+        f"- Candidate answers: {len(caller_turns)}",
+        f"- Coach responses: {len(assistant_turns)}",
     ]
 
-    # Analyze answer patterns
-    if caller_turns:
-        answer_lengths = [len(e[2].split()) for e in caller_turns]
-        avg_length = sum(answer_lengths) / len(answer_lengths)
-
-        lines.append("## Answer Analysis")
-        lines.append("")
-        lines.append(f"- **Average answer length**: ~{avg_length:.0f} words")
-        if avg_length < 30:
-            lines.append("- **Observation**: Answers are concise. Consider adding more specific metrics and context.")
-        elif avg_length < 80:
-            lines.append("- **Observation**: Good length for recruiter screen answers.")
-        else:
-            lines.append("- **Observation**: Detailed answers. Consider structuring with STAR method for clarity.")
-
-        lines.append("")
-
-    # Identify key topics
+    # Identify topics discussed (uses private topic_keywords)
     all_text = " ".join(e[2] for e in caller_turns).lower()
-    topics = []
-
-    for topic, keywords in topic_keywords.items():
-        if any(kw in all_text for kw in keywords):
-            topics.append(topic)
-
+    topics = [t for t, kws in topic_keywords.items() if any(kw in all_text for kw in kws)]
     if topics:
-        lines.append("## Topics Discussed")
-        lines.append("")
-        for topic in topics:
-            lines.append(f"- {topic}")
-        lines.append("")
-
-    # Suggested improvements
-    lines.append("## Suggestions")
-    lines.append("")
-    lines.append("1. **Use specific metrics**: When describing projects, lead with scale (10+ PB, 10k+ req/s) and impact ($24M deal, $30K budget)")
-    lines.append("2. **STAR method for behavioral questions**: Situation, Task, Action, Result")
-    lines.append("3. **Connect to GitHub**: Mention why you're excited about Codespaces specifically")
-    lines.append("4. **Prepare 2-3 questions**: Ask about team challenges, success metrics, growth opportunities")
-    lines.append("")
-
-    # Feedback summary
-    lines.append("## Feedback Summary")
-    lines.append("")
-    lines.append("Overall, this was a good practice session. Focus on:")
-    lines.append("- Being more specific about your impact in each role")
-    lines.append("- Connecting your experience to GitHub's needs")
-    lines.append("- Asking thoughtful questions about the role")
+        lines.append(f"- Topics discussed: {', '.join(topics)}")
 
     return "\n".join(lines)
 
@@ -146,7 +102,7 @@ Please provide deeper insights on:
 1. What was said well - specific strengths to reinforce
 2. What could be improved - concrete suggestions
 3. Which resume bullets should be emphasized more
-4. How well did the answers connect to the GitHub role?
+4. How well did the answers connect to the target role?
 5. Any red flags or concerns the interviewer might have
 
 Keep your response conversational and actionable.
