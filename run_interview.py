@@ -58,8 +58,8 @@ async def main():
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
-    # Load system prompt from external file
-    prompt_path = Path(__file__).parent / "interview_system_prompt.md"
+    # Load system prompt from private repo
+    prompt_path = Path.home() / "Ideas" / "interviews" / "system_prompt.md"
     with open(prompt_path) as f:
         INTERVIEW_SYSTEM_PROMPT = f.read()
 
