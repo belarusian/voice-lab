@@ -8,7 +8,7 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from pipecat.frames.frames import Frame, TextFrame, TranscriptionFrame
+from pipecat.frames.frames import Frame, TextFrame, TranscriptionFrame, LLMTextFrame, TTSTextFrame
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
 
@@ -112,7 +112,7 @@ class CallerTranscriptLogger(FrameProcessor):
 
 
 class AssistantTranscriptLogger(FrameProcessor):
-    """After LLM: captures Sasha's text (TextFrame) before TTS."""
+    """After LLM: captures Sasha's text (LLMTextFrame/TTSTextFrame) before TTS."""
 
     def __init__(self, transcript: CallTranscript, **kwargs):
         super().__init__(**kwargs)
@@ -120,7 +120,8 @@ class AssistantTranscriptLogger(FrameProcessor):
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
-        if isinstance(frame, TextFrame) and not isinstance(frame, TranscriptionFrame):
+        # Capture LLMTextFrame (raw text from LLM) or TTSTextFrame (text before TTS)
+        if isinstance(frame, LLMTextFrame) or isinstance(frame, TTSTextFrame):
             if frame.text:
                 self._transcript.add_sunny_chunk(frame.text)
         await self.push_frame(frame, direction)
